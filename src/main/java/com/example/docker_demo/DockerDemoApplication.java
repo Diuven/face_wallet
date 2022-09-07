@@ -48,15 +48,28 @@ public class DockerDemoApplication {
         return "Hello World";
     }
 
-    @GetMapping("/wallet/balance")
-    public String getAccountBalance(@Param("address") String address) throws IOException {
+    @GetMapping("/send")
+    public String send(@Param("toAddress") String toAddress, @Param("publicKeyHex") String publicKeyHex, @Param("privateKeyHex") String privateKeyHex) throws Exception {
+        ///http://localhost:8080/send
+        // &toAddress=0x188051d883991C0D7685aEAF7D3f0F7089cE60b5
+        // &publicKey=71a5dae54184e159b980597e814736c2f9c75fdaf0a440e056c44123875d0ae813dddd19bec9b92350a0302496f01b25bf37335dcc9c9b204efc042c20ba8a6a
+        // &privateKey=a11371ac2dcfbc71f1599d901b098b782cff271e54707b0a80a8ce0735e1f493
+        System.out.println("a" + new BigInteger("123", 16).toString());
+        System.out.printf("pub: %s, pri: %s%n", publicKeyHex, privateKeyHex);
+        BigInteger privateKey = new BigInteger(privateKeyHex, 16);
+        BigInteger publicKey = new BigInteger(publicKeyHex, 16);
+        ECKeyPair ecKeyPair = new ECKeyPair(privateKey, publicKey);
+        Credentials credentials = Credentials.create(ecKeyPair);
+
         Web3j web3j = Web3j.build(new HttpService(
                 "https://tn.henesis.io/ethereum/ropsten?clientId=815fcd01324b8f75818a755a72557750"));
 
-        EthGetBalance balance = web3j.ethGetBalance(address, DefaultBlockParameterName.LATEST).send();
-        BigDecimal balanceInEther = Convert.fromWei(balance.getBalance().toString(), Convert.Unit.ETHER);
+        TransactionReceipt transferReceipt = Transfer.sendFunds(
+                web3j, credentials, toAddress, new BigDecimal("0.1"), Convert.Unit.ETHER
+        ).send();
 
-        return String.format("address: %s, balance: %s, in eth: %s", address, balance, balanceInEther.toString());
+        return ("Transaction complete, view it at https://ropsten.etherscan.io/tx/"
+                + transferReceipt.getTransactionHash());
     }
 
     @RequestMapping("/version")
