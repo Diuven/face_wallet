@@ -28,6 +28,7 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     developmentOnly "org.springframework.boot:spring-boot-devtools"
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
     testCompile 'junit:junit',
             'org.springframework.boot:spring-boot-starter-test:2.7.3'
 }

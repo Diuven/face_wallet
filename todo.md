@@ -2,6 +2,8 @@
   * First, make skeleton entities with only h2
   * Then add postgres setup
   * Wallet table, Transaction table
+    * Block confirmation & transaction counter, transaction state
+  * Indexing (on txs)
 * Error handling
     * HTTP errors (codes & messages) & responses
     * proper logging
