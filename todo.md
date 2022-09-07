@@ -1,9 +1,17 @@
+* APIs
+  * PollingTransactionReceiptProcessor
+    * Create transaction, and give hash and checking url
+    * Follow the transaction status on that other url
 * Attach DB
   * First, make skeleton entities with only h2
   * Then add postgres setup
   * Wallet table, Transaction table
+    * Block confirmation & transaction counter, transaction state
+  * Indexing (on txs)
 * Error handling
     * HTTP errors (codes & messages) & responses
+      * invalid request
+      * web3 exception
     * proper logging
 * Testing
     * Unit tests
@@ -25,9 +33,10 @@
   * RestDocs
   * Structures
   * How to run & develop & investigate
-* Response DTOs
+* DTOs
   * Gather and make structures of each data classes
   * DB models / Responses / Request bodies / Exceptions & Errors
+  * Configs (Endpoint url, block confirmation threshold, etc)
 * Namings
   * Project name (change from docker_demo!)
   * Package name
