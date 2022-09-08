@@ -23,6 +23,7 @@
       * Maybe we can use salt? or shared key?
 * Add better logging
     * Customized request & response logging
+      * sensitive information should not be logged
     * Consistent logging format between http context logging and web3 logging
     * Save in files
 * Cron
@@ -37,6 +38,7 @@
   * Gather and make structures of each data classes
   * DB models / Responses / Request bodies / Exceptions & Errors
   * Configs (Endpoint url, block confirmation threshold, etc)
+  * ResponseEntity
 * Namings
   * Project name (change from docker_demo!)
   * Package name

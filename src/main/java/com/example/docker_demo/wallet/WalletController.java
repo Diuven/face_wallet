@@ -1,9 +1,7 @@
 package com.example.docker_demo.wallet;
 
 import org.springframework.data.repository.query.Param;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.web3j.crypto.*;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -22,9 +20,10 @@ import static org.web3j.crypto.Hash.sha256;
 @RequestMapping("wallet")
 public class WalletController {
     private static final SecureRandom secureRandom = new SecureRandom();
+    @PostMapping("/create")
+    public WalletCreateResponse createWallet(@RequestBody WalletCreateRequest request) {
+        String password = request.getPassword();
 
-    @GetMapping("/create")
-    public WalletCreateResponse createWallet(@Param("password") String password) throws CipherException, IOException {
         // TODO update web3j and create proper mnemonic
         byte[] initialEntropy = new byte[16];
         secureRandom.nextBytes(initialEntropy);
