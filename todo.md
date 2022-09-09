@@ -3,9 +3,9 @@
     * Create transaction, and give hash and checking url
     * Follow the transaction status on that other url
 * Attach DB
-  * First, make skeleton entities with only h2
+  * ~~First, make skeleton entities with only h2~~
   * Then add postgres setup
-  * Wallet table, Transaction table
+  * ~~Wallet tabl~e~, Transaction table
     * Block confirmation & transaction counter, transaction state
   * Indexing (on txs)
 * Error handling
