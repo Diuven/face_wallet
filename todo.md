@@ -1,3 +1,7 @@
+* APIs
+  * PollingTransactionReceiptProcessor
+    * Create transaction, and give hash and checking url
+    * Follow the transaction status on that other url
 * Attach DB
   * First, make skeleton entities with only h2
   * Then add postgres setup
@@ -6,6 +10,8 @@
   * Indexing (on txs)
 * Error handling
     * HTTP errors (codes & messages) & responses
+      * invalid request
+      * web3 exception
     * proper logging
 * Testing
     * Unit tests
@@ -17,6 +23,7 @@
       * Maybe we can use salt? or shared key?
 * Add better logging
     * Customized request & response logging
+      * sensitive information should not be logged
     * Consistent logging format between http context logging and web3 logging
     * Save in files
 * Cron
@@ -27,9 +34,11 @@
   * RestDocs
   * Structures
   * How to run & develop & investigate
-* Response DTOs
+* DTOs
   * Gather and make structures of each data classes
   * DB models / Responses / Request bodies / Exceptions & Errors
+  * Configs (Endpoint url, block confirmation threshold, etc)
+  * ResponseEntity
 * Namings
   * Project name (change from docker_demo!)
   * Package name
