@@ -2,6 +2,7 @@
   * PollingTransactionReceiptProcessor
     * Create transaction, and give hash and checking url
     * Follow the transaction status on that other url
+  * Separate service layers
 * Attach DB
   * ~~First, make skeleton entities with only h2~~
   * Then add postgres setup
