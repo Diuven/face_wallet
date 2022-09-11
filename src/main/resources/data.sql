@@ -1,2 +1,2 @@
 INSERT INTO wallet (id, address, balance, nonce) VALUES
-    (1, '0x82aC8F02278b2c9CA5FfE3483599b0b70C609d59', 0, 0);
+    (default, '0x82ac8f02278b2c9ca5ffe3483599b0b70c609d59', 0, 0);

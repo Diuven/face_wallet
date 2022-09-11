@@ -5,13 +5,16 @@
 * Attach DB
   * ~~First, make skeleton entities with only h2~~
   * Then add postgres setup
-  * ~~Wallet tabl~e~, Transaction table
-    * Block confirmation & transaction counter, transaction state
+  * ~~Wallet table~~, ~~Transaction table~~
+    * ~~Block confirmation & transaction counter, transaction state~~
   * Indexing (on txs)
+  * External / Internal wallets
 * Error handling
     * HTTP errors (codes & messages) & responses
-      * invalid request
-      * web3 exception
+      * Bad requests
+        * web3 exception
+        * db exception
+        * request exception (missing params or etc)
     * proper logging
 * Testing
     * Unit tests

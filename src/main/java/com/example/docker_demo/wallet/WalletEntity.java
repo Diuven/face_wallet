@@ -3,12 +3,13 @@ package com.example.docker_demo.wallet;
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Objects;
 
 @Entity
 @Table(name = "wallet")
 public class WalletEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(name = "address", nullable = false, unique = true)
     private String address;
@@ -52,7 +53,24 @@ public class WalletEntity {
         return balance;
     }
 
+    public void setNonce(Long nonce) {
+        this.nonce = nonce;
+    }
+
     public void setBalance(BigDecimal balance) {
         this.balance = balance;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        WalletEntity that = (WalletEntity) o;
+        return address.equals(that.address) && nonce.equals(that.nonce) && balance.compareTo(that.balance) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(address, nonce, balance);
     }
 }

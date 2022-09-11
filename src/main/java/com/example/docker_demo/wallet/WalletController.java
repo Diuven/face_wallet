@@ -6,6 +6,7 @@ import org.web3j.crypto.*;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.response.EthGetBalance;
+import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.utils.Convert;
 
@@ -43,7 +44,7 @@ public class WalletController {
         byte[] seed = MnemonicUtils.generateSeed(mnemonic, password);
         ECKeyPair ecKeyPair = ECKeyPair.create(sha256(seed));
         Credentials credentials = Credentials.create(ecKeyPair);
-        String address = credentials.getAddress();
+        String address = credentials.getAddress().toLowerCase();
 
         WalletEntity walletEntity = repository.save(new WalletEntity(address));
 
@@ -58,21 +59,24 @@ public class WalletController {
         Web3j web3j = Web3j.build(new HttpService(
                 "https://tn.henesis.io/ethereum/ropsten?clientId=815fcd01324b8f75818a755a72557750"));
 
+        address = address.toLowerCase();
         Optional<WalletEntity> optionalWalletEntity = repository.findByAddress(address);
         if (optionalWalletEntity.isEmpty()){
             throw new RuntimeException("Not present");
         }
         WalletEntity walletEntity = optionalWalletEntity.get();
 
+        EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(address, DefaultBlockParameterName.LATEST).send();
+        BigInteger nonce =  ethGetTransactionCount.getTransactionCount();
         EthGetBalance balance = web3j.ethGetBalance(address, DefaultBlockParameterName.LATEST).send();
         BigDecimal balanceInEth = Convert.fromWei(balance.getBalance().toString(), Convert.Unit.ETHER);
 
         BigDecimal balanceInDb = walletEntity.getBalance().stripTrailingZeros();
         if (balanceInEth.compareTo(balanceInDb) != 0){
-            // TODO fill nonce and txs
             walletEntity.setBalance(balanceInEth);
+            walletEntity.setNonce(nonce.longValue());
             repository.save(walletEntity);
-            logger.info(String.format("Updated balance of %s", address));
+            logger.info(String.format("Updated wallet %s", address));
         }
 
         return new WalletBalanceResponse(
