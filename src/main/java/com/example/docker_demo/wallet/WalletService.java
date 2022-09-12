@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.security.SecureRandom;
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 
 import static org.web3j.crypto.Hash.sha256;
@@ -87,7 +87,6 @@ public class WalletService {
         }
     }
 
-
     // DB methods
     public WalletEntity createWalletEntityFromCredentials(Credentials credentials) {
         String address = credentials.getAddress().toLowerCase();
@@ -100,25 +99,22 @@ public class WalletService {
         );
     }
 
-    public WalletEntity increaseWalletEntityNonce(WalletEntity walletEntity) {
+    public boolean isSufficientBalance(WalletEntity walletEntity, BigDecimal amount) {
+        BigDecimal balanceAvailable = walletEntity.getBalance().subtract(walletEntity.getBalanceOnHold());
+        return balanceAvailable.compareTo(amount) >= 0;
+    }
+
+    public WalletEntity addPendingTransaction(WalletEntity walletEntity, BigDecimal amount) {
+        walletEntity.setBalanceOnHold(walletEntity.getBalanceOnHold().add(amount));
         walletEntity.setNonce(walletEntity.getNonce() + 1);
         return repository.save(walletEntity);
     }
 
-    public WalletEntity setWalletEntityBalance(WalletEntity walletEntity, BigDecimal balance) {
-        walletEntity.setBalance(balance);
-        return repository.save(walletEntity);
-    }
-
-    public boolean tryIncreaseWalletEntityBalance(String address, BigDecimal amount) {
-        Optional<WalletEntity> optionalEntity = repository.findByAddress(address);
-        if (optionalEntity.isEmpty()){
-            return false;
-        }
-        WalletEntity walletEntity = optionalEntity.get();
-        walletEntity.setBalance(walletEntity.getBalance().add(amount));
-        repository.save(walletEntity);
-        return true;
+    public Iterable<WalletEntity> updateConfirmedTransaction(WalletEntity fromWalletEntity, WalletEntity toWalletEntity, BigDecimal amount) {
+        fromWalletEntity.setBalanceOnHold(fromWalletEntity.getBalanceOnHold().subtract(amount));
+        fromWalletEntity.setBalance(fromWalletEntity.getBalance().subtract(amount));
+        toWalletEntity.setBalance(toWalletEntity.getBalance().add(amount));
+        return repository.saveAll(List.of(fromWalletEntity, toWalletEntity));
     }
 
     // DTO methods

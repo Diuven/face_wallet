@@ -2,7 +2,6 @@ package com.example.docker_demo.wallet;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Objects;
 
 @Entity
@@ -17,24 +16,27 @@ public class WalletEntity {
     private Long nonce;
     @Column(name = "balance", nullable = false, columnDefinition = "DECIMAL(64, 20)")
     private BigDecimal balance;
+    @Column(name = "balance_on_hold", nullable = false, columnDefinition = "DECIMAL(64, 20)")
+    private BigDecimal balanceOnHold;
 
     protected WalletEntity() {}
 
     public WalletEntity(String address) {
-        this(address, 0L, BigDecimal.ZERO);
+        this(address, 0L, BigDecimal.ZERO, BigDecimal.ZERO);
     }
 
-    public WalletEntity(String address, Long nonce, BigDecimal balance) {
+    public WalletEntity(String address, Long nonce, BigDecimal balance, BigDecimal balanceOnHold) {
         this.address = address;
         this.nonce = nonce;
         this.balance = balance;
+        this.balanceOnHold = balanceOnHold;
     }
 
     @Override
     public String toString() {
         return String.format(
-                "WalletEntity[id=%d, address='%s', nonce='%d', balance='%s']",
-                id, address, nonce, balance);
+                "WalletEntity[id=%d, address='%s', nonce='%d', balance='%s' balanceOnHold='%s']",
+                id, address, nonce, balance, balanceOnHold);
     }
 
     public Long getId() {
@@ -53,6 +55,10 @@ public class WalletEntity {
         return balance;
     }
 
+    public BigDecimal getBalanceOnHold() {
+        return balanceOnHold;
+    }
+
     public void setNonce(Long nonce) {
         this.nonce = nonce;
     }
@@ -61,16 +67,7 @@ public class WalletEntity {
         this.balance = balance;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        WalletEntity that = (WalletEntity) o;
-        return address.equals(that.address) && nonce.equals(that.nonce) && balance.compareTo(that.balance) == 0;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(address, nonce, balance);
+    public void setBalanceOnHold(BigDecimal balanceOnHold) {
+        this.balanceOnHold = balanceOnHold;
     }
 }

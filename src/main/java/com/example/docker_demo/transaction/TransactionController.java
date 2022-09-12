@@ -35,14 +35,13 @@ public class TransactionController {
         String toAddress = request.getToAddress().toLowerCase();
         String fromAddress = credentials.getAddress().toLowerCase();
 
-        // Get and update wallet
+        // Check wallet
         WalletEntity fromWalletEntity = walletService.fetchWalletEntityFromAddress(fromAddress);
-        walletService.updateWalletInfo(fromWalletEntity);
-        if (fromWalletEntity.getBalance().compareTo(amount) < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount exceeds balance");
+        WalletEntity toWalletEntity = walletService.fetchWalletEntityFromAddress(toAddress);
+        if (!walletService.isSufficientBalance(fromWalletEntity, amount)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount exceeds available balance");
         }
         BigInteger nonce = BigInteger.valueOf(fromWalletEntity.getNonce());
-
         // TODO set gas priority from request?
         BigInteger gasPrice = service.fetchCurrentGasPrice();
 
@@ -50,10 +49,12 @@ public class TransactionController {
         String transactionHexValue = service.createRawTransactionInHex(
                 nonce, gasPrice, toAddress, amount, credentials
         );
-        // Write in db
+        // Write db
         TransactionEntity transactionEntity = service.createTransactionEntity(
                 fromAddress, toAddress, amount, nonce.longValue()
         );
+        fromWalletEntity = walletService.addPendingTransaction(fromWalletEntity, amount);
+
         // Send transaction
         String transactionHash = service.sendRawTransaction(transactionHexValue);
 
@@ -61,16 +62,10 @@ public class TransactionController {
         TransactionReceipt receipt = service.waitForTransactionReceipt(transactionHash);
         // Update db
         transactionEntity = service.updateMinedTransactionEntity(transactionEntity, receipt);
-        fromWalletEntity = walletService.increaseWalletEntityNonce(fromWalletEntity);
 
-        // Wait for confirmation
-        service.waitForBlockConfirmation(transactionHash, receipt.getBlockNumber());
-        // Update DB
-        transactionEntity = service.updateConfirmedTransactionEntity(transactionEntity);
-        fromWalletEntity = walletService.setWalletEntityBalance(
-                fromWalletEntity, fromWalletEntity.getBalance().subtract(amount)
-        );
-        walletService.tryIncreaseWalletEntityBalance(toAddress, amount);
+        // Wait for confirmation and update
+        transactionEntity = service.waitAndUpdateBlockConfirmation(transactionEntity, receipt.getBlockNumber());
+        Iterable<WalletEntity> wallets = walletService.updateConfirmedTransaction(fromWalletEntity, toWalletEntity, amount);
 
         return ResponseEntity.ok(transactionEntity);
     }

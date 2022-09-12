@@ -147,9 +147,9 @@ public class TransactionService {
         return receipt;
     }
 
-    public void waitForBlockConfirmation(String transactionHash, BigInteger transactionBlockNumber) {
+    public TransactionEntity waitAndUpdateBlockConfirmation(TransactionEntity transactionEntity, BigInteger transactionBlockNumber) {
         BigInteger lastBlockNumber = transactionBlockNumber;
-        for (int iter = 0; iter < 5; iter++) {
+        for (int iter = 0; iter < 10; iter++) {
             EthBlockNumber ethBlockNumber = null;
             try {
                 ethBlockNumber = web3j.ethBlockNumber().send();
@@ -166,11 +166,15 @@ public class TransactionService {
                 // New block mined
                 BigInteger blockConfirmation = currentBlockNumber.subtract(transactionBlockNumber);
                 if (blockConfirmation.intValue() > CONFIRMATION_LIMIT) {
-                    return;
+                    transactionEntity.setBlockConfirmation(CONFIRMATION_LIMIT);
+                    transactionEntity.setStatus("CONFIRMED");
+                    return transactionRepository.save(transactionEntity);
                 }
                 else {
+                    transactionEntity.setBlockConfirmation(blockConfirmation.intValue());
+                    transactionEntity = transactionRepository.save(transactionEntity);
                     lastBlockNumber = currentBlockNumber;
-                    iter = 0;
+                    iter = 0; // Reset retry count
                 }
             }
             // Wait 5 seconds
@@ -181,6 +185,11 @@ public class TransactionService {
                 throw new RuntimeException(e);
             }
         }
+        // Unsuccessful
+        throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Timeout during waiting for block confirmation. Is node down?"
+        );
     }
 
     // DB methods
