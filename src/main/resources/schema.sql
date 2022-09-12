@@ -19,6 +19,7 @@ CREATE TABLE transaction (
     nonce               BIGINT NOT NULL,
     block_hash          VARCHAR(96),
     block_number        BIGINT,
+    ts                  TIMESTAMP,
     PRIMARY KEY (id),
     CONSTRAINT check_lowercase_hash CHECK (LOWER(transaction_hash) = transaction_hash)
 );

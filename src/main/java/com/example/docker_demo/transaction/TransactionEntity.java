@@ -3,6 +3,7 @@ package com.example.docker_demo.transaction;
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Date;
 
 @Entity
 @Table(name = "transaction", uniqueConstraints = {@UniqueConstraint(columnNames = {"to_address", "nonce"})})
@@ -28,6 +29,9 @@ public class TransactionEntity {
     private String blockHash;
     @Column(name = "block_number")
     private BigInteger blockNumber;
+    @Column(name = "ts")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date ts;
 
     protected TransactionEntity() {
     }
@@ -40,7 +44,8 @@ public class TransactionEntity {
                              BigDecimal amount,
                              Long nonce,
                              String blockHash,
-                             BigInteger blockNumber) {
+                             BigInteger blockNumber,
+                             Date ts) {
         // TODO get gas data?
         this.transactionHash = transactionHash;
         this.status = status;
@@ -51,10 +56,11 @@ public class TransactionEntity {
         this.nonce = nonce;
         this.blockHash = blockHash;
         this.blockNumber = blockNumber;
+        this.ts = ts;
     }
 
     public TransactionEntity(String fromAddress, String toAddress, BigDecimal amount, Long nonce) {
-        this("", "PENDING", 0, fromAddress, toAddress, amount, nonce, "", BigInteger.ZERO);
+        this("", "PENDING", 0, fromAddress, toAddress, amount, nonce, "", BigInteger.ZERO, new Date());
     }
 
 
@@ -63,9 +69,9 @@ public class TransactionEntity {
         return String.format(
                 "TransactionEntity[\n" +
                         "id=%d, transactionHash='%s', state='%s', blockConfirmation='%s', fromAddress='%s', toAddress='%s'," +
-                        "amount='%s', nonce='%d', blockHash='%s' blockNumber='%s'\n]",
+                        "amount='%s', nonce='%d', blockHash='%s' blockNumber='%s', ts='%s'\n]",
                 id, transactionHash, status, blockConfirmation, fromAddress, toAddress,
-                amount, nonce, blockHash, blockNumber);
+                amount, nonce, blockHash, blockNumber, ts);
     }
 
     public Long getId() {
@@ -108,6 +114,10 @@ public class TransactionEntity {
         return blockNumber;
     }
 
+    public Date getTs() {
+        return ts;
+    }
+
     public void setTransactionHash(String transactionHash) {
         this.transactionHash = transactionHash;
     }
@@ -126,5 +136,9 @@ public class TransactionEntity {
 
     public void setBlockNumber(BigInteger blockNumber) {
         this.blockNumber = blockNumber;
+    }
+
+    public void setTs(Date ts) {
+        this.ts = ts;
     }
 }

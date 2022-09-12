@@ -10,6 +10,7 @@ import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.TransactionEncoder;
 import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.methods.response.*;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.utils.Convert;
@@ -20,6 +21,7 @@ import javax.validation.Validator;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Date;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -107,7 +109,6 @@ public class TransactionService {
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "transaction")
         );
     }
-
 
     public TransactionReceipt waitForTransactionReceipt(String transactionHash) {
         TransactionReceipt receipt = null;
@@ -201,10 +202,24 @@ public class TransactionService {
     }
 
     public TransactionEntity updateMinedTransactionEntity(TransactionEntity transactionEntity, TransactionReceipt receipt) {
+        DefaultBlockParameter blockParameter = DefaultBlockParameter.valueOf(receipt.getBlockNumber());
+        Date minedDate;
+        try {
+            EthBlock ethBlock = web3j.ethGetBlockByNumber(blockParameter, true).send();
+            minedDate = new Date(ethBlock.getBlock().getTimestamp().longValue());
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            e.printStackTrace();
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error while fetching block info from the node. Is the node down?"
+            );
+        }
         transactionEntity.setStatus("MINED");
         transactionEntity.setTransactionHash(receipt.getTransactionHash());
         transactionEntity.setBlockHash(receipt.getBlockHash());
         transactionEntity.setBlockNumber(receipt.getBlockNumber());
+        transactionEntity.setTs(minedDate);
         return transactionRepository.save(transactionEntity);
     }
 
