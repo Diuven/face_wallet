@@ -1,5 +1,7 @@
 package com.example.docker_demo.wallet;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,15 +21,14 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.Optional;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static org.web3j.crypto.Hash.sha256;
 
 @Service
 public class WalletService {
-    private static final Logger logger = Logger.getLogger(WalletService.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(WalletService.class.getName());
     private static final SecureRandom secureRandom = new SecureRandom();
     private final WalletRepository repository;
     private final Validator validator;
@@ -41,7 +42,7 @@ public class WalletService {
     }
 
     // Web3 methods
-    public String generateRandomMnemonicFromPassword(String password) {
+    public String generateRandomMnemonic() {
         byte[] initialEntropy = new byte[16];
         secureRandom.nextBytes(initialEntropy);
         // TODO update web3j and create proper mnemonic
@@ -62,13 +63,14 @@ public class WalletService {
         BigDecimal balanceInEth;
         try {
             // Fetch nonce and balance from the node
+            // TODO make this atomic?
             EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(address, DefaultBlockParameterName.LATEST).send();
             nonce = ethGetTransactionCount.getTransactionCount();
             EthGetBalance balance = web3j.ethGetBalance(address, DefaultBlockParameterName.LATEST).send();
             balanceInEth = Convert.fromWei(balance.getBalance().toString(), Convert.Unit.ETHER);
         }
         catch (IOException e) {
-            logger.log(Level.SEVERE, e.getMessage());
+            logger.error(e.getMessage());
             e.printStackTrace();
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
@@ -85,6 +87,7 @@ public class WalletService {
         }
     }
 
+
     // DB methods
     public WalletEntity createWalletEntityFromCredentials(Credentials credentials) {
         String address = credentials.getAddress().toLowerCase();
@@ -93,12 +96,33 @@ public class WalletService {
 
     public WalletEntity fetchWalletEntityFromAddress(String address) {
         return repository.findByAddress(address).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND)
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "wallet")
         );
     }
 
+    public WalletEntity increaseWalletEntityNonce(WalletEntity walletEntity) {
+        walletEntity.setNonce(walletEntity.getNonce() + 1);
+        return repository.save(walletEntity);
+    }
+
+    public WalletEntity setWalletEntityBalance(WalletEntity walletEntity, BigDecimal balance) {
+        walletEntity.setBalance(balance);
+        return repository.save(walletEntity);
+    }
+
+    public boolean tryIncreaseWalletEntityBalance(String address, BigDecimal amount) {
+        Optional<WalletEntity> optionalEntity = repository.findByAddress(address);
+        if (optionalEntity.isEmpty()){
+            return false;
+        }
+        WalletEntity walletEntity = optionalEntity.get();
+        walletEntity.setBalance(walletEntity.getBalance().add(amount));
+        repository.save(walletEntity);
+        return true;
+    }
+
     // DTO methods
-    public String validateCreateRequest(WalletCreateRequest request) {
+    public boolean validateCreateRequest(WalletCreateRequest request) {
         Set<ConstraintViolation<WalletCreateRequest>> violations = validator.validate(request);
 
         if (!violations.isEmpty()) {
@@ -109,7 +133,7 @@ public class WalletService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, sb.toString());
         }
 
-        return request.getPassword();
+        return true;
     }
 
     public WalletCreateResponse createWalletCreateResponse(WalletEntity walletEntity, String mnemonic, Credentials credentials) {

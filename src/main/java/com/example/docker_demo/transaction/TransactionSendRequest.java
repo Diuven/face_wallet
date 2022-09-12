@@ -1,10 +1,14 @@
 package com.example.docker_demo.transaction;
 
+import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public class TransactionSendRequest {
+    @NotNull
     private String toAddress;
+    @NotNull
     private String privateKeyHex;
+    @NotNull
     private String amount;
 
     public TransactionSendRequest() {}

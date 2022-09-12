@@ -1,131 +1,76 @@
 package com.example.docker_demo.transaction;
 
 import com.example.docker_demo.wallet.WalletEntity;
-import com.example.docker_demo.wallet.WalletRepository;
+import com.example.docker_demo.wallet.WalletService;
 import org.springframework.data.repository.query.Param;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.ECKeyPair;
-import org.web3j.crypto.RawTransaction;
-import org.web3j.crypto.TransactionEncoder;
 import org.web3j.protocol.Web3j;
-import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.response.*;
 import org.web3j.protocol.http.HttpService;
-import org.web3j.utils.Convert;
-import org.web3j.utils.Numeric;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("transaction")
 public class TransactionController {
-    public static final BigInteger GAS_LIMIT = BigInteger.valueOf(21000);
-    private final TransactionRepository transactionRepository;
-    private final WalletRepository walletRepository;
+    private final TransactionService service;
+    private final WalletService walletService;
 
-    public TransactionController(TransactionRepository transactionRepository, WalletRepository walletRepository) {
-        this.transactionRepository = transactionRepository;
-        this.walletRepository = walletRepository;
+    public TransactionController(TransactionService service, WalletService walletService) {
+        this.service = service;
+        this.walletService = walletService;
     }
 
     @PostMapping("/send")
-    public ResponseEntity<TransactionEntity> send(@RequestBody TransactionSendRequest request) throws Exception {
-        BigInteger privateKey = new BigInteger(request.getPrivateKeyHex(), 16);
-        BigDecimal amount = request.getAmountAsDecimal();
+    public ResponseEntity<TransactionEntity> sendTransaction(@RequestBody TransactionSendRequest request) {
+        service.validateTransactionSendRequest(request);
+        Credentials credentials = service.generateCredentialsFromPrivateKeyHex(request.getPrivateKeyHex());
+        BigDecimal amount = service.toBigDecimal(request.getAmount(), "amount");
         String toAddress = request.getToAddress().toLowerCase();
-        ECKeyPair ecKeyPair = ECKeyPair.create(privateKey);
-        Credentials credentials = Credentials.create(ecKeyPair);
         String fromAddress = credentials.getAddress().toLowerCase();
 
-        Web3j web3j = Web3j.build(new HttpService(
-                "https://tn.henesis.io/ethereum/ropsten?clientId=815fcd01324b8f75818a755a72557750"));
-
-
-        // Get balance and nonce of fromAddress, and update db if necessary
-        // TODO make this atmoic?
-        EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(fromAddress, DefaultBlockParameterName.LATEST).send();
-        BigInteger nonce =  ethGetTransactionCount.getTransactionCount();
-        EthGetBalance ethGetBalance = web3j.ethGetBalance(fromAddress, DefaultBlockParameterName.LATEST).send();
-        BigDecimal balanceInEth = Convert.fromWei(ethGetBalance.getBalance().toString(), Convert.Unit.ETHER);
-
-        Optional<WalletEntity> optionalWalletEntity = walletRepository.findByAddress(fromAddress);
-        WalletEntity walletEntity = (optionalWalletEntity.orElseGet(
-                () -> new WalletEntity(fromAddress, nonce.longValue(), balanceInEth))
-        );
-        if (walletEntity.getBalance().compareTo(balanceInEth) != 0 || walletEntity.getNonce() != nonce.longValue()){
-            walletEntity.setBalance(balanceInEth);
-            walletEntity.setNonce(nonce.longValue());
-            walletEntity = walletRepository.save(walletEntity);
+        // Get and update wallet
+        WalletEntity fromWalletEntity = walletService.fetchWalletEntityFromAddress(fromAddress);
+        walletService.updateWalletInfo(fromWalletEntity);
+        if (fromWalletEntity.getBalance().compareTo(amount) < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount exceeds balance");
         }
-
-        if (balanceInEth.compareTo(amount) < 0) {
-            // Reject if balance is not enough
-            throw new RuntimeException(String.format("balance is not enough (%s > %s)", amount, balanceInEth));
-        }
+        BigInteger nonce = BigInteger.valueOf(fromWalletEntity.getNonce());
 
         // TODO set gas priority from request?
-        EthGasPrice ethGasPrice = web3j.ethGasPrice().send();
-        BigInteger gasPrice = ethGasPrice.getGasPrice();
+        BigInteger gasPrice = service.fetchCurrentGasPrice();
 
-        // Prepare the rawTransaction
-        RawTransaction rawTransaction  = RawTransaction.createEtherTransaction(
-                nonce, gasPrice, GAS_LIMIT, toAddress, Convert.toWei(amount, Convert.Unit.ETHER).toBigInteger());
-
-        // Sign the transaction
-        byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction, credentials);
-        String hexValue = Numeric.toHexString(signedMessage);
-
+        // Create transaction
+        String transactionHexValue = service.createRawTransactionInHex(
+                nonce, gasPrice, toAddress, amount, credentials
+        );
         // Write in db
-        TransactionEntity transactionEntity = new TransactionEntity(
+        TransactionEntity transactionEntity = service.createTransactionEntity(
                 fromAddress, toAddress, amount, nonce.longValue()
         );
-        transactionEntity = transactionRepository.save(transactionEntity);
-
         // Send transaction
-        EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction(hexValue).send();
-        String transactionHash = ethSendTransaction.getTransactionHash();
+        String transactionHash = service.sendRawTransaction(transactionHexValue);
 
         // Wait for transaction to be mined
-        Optional<TransactionReceipt> optionalTransactionReceipt = Optional.empty();
-        do {
-            EthGetTransactionReceipt ethGetTransactionReceiptResp = web3j.ethGetTransactionReceipt(transactionHash).send();
-            optionalTransactionReceipt = ethGetTransactionReceiptResp.getTransactionReceipt();
-            Thread.sleep(3000); // Wait 3 sec
-        } while(optionalTransactionReceipt.isEmpty());
-        TransactionReceipt receipt = optionalTransactionReceipt.get();
+        TransactionReceipt receipt = service.waitForTransactionReceipt(transactionHash);
+        // Update db
+        transactionEntity = service.updateMinedTransactionEntity(transactionEntity, receipt);
+        fromWalletEntity = walletService.increaseWalletEntityNonce(fromWalletEntity);
 
-        if (!receipt.getStatus().equals("0x1")){
-            throw new RuntimeException(String.format("Transaction not successful %s", transactionHash));
-        }
-
-        transactionEntity.setStatus("MINED");
-        transactionEntity.setTransactionHash(transactionHash);
-        transactionEntity.setBlockHash(receipt.getBlockHash());
-        transactionEntity.setBlockNumber(receipt.getBlockNumber());
-        transactionEntity = transactionRepository.save(transactionEntity);
-
-        walletEntity.setNonce(nonce.longValue() + 1);
-        walletEntity = walletRepository.save(walletEntity);
-
-
-        int blockConfirmation = 0;
-        do {
-            EthBlockNumber ethBlockNumber = web3j.ethBlockNumber().send();
-            BigInteger rawBlockConfirmation = ethBlockNumber.getBlockNumber().subtract(receipt.getBlockNumber());
-            blockConfirmation = Math.min(rawBlockConfirmation.intValue(), 12);
-            Thread.sleep(5000); // Wait 3 sec
-        } while(blockConfirmation < 12);
-
-        transactionEntity.setBlockConfirmation(blockConfirmation);
-        transactionEntity.setStatus("CONFIRMED");
-        transactionEntity = transactionRepository.save(transactionEntity);
-
-        walletEntity.setBalance(walletEntity.getBalance().subtract(amount));
-        walletEntity = walletRepository.save(walletEntity);
+        // Wait for confirmation
+        service.waitForBlockConfirmation(transactionHash, receipt.getBlockNumber());
+        // Update DB
+        transactionEntity = service.updateConfirmedTransactionEntity(transactionEntity);
+        fromWalletEntity = walletService.setWalletEntityBalance(
+                fromWalletEntity, fromWalletEntity.getBalance().subtract(amount)
+        );
+        walletService.tryIncreaseWalletEntityBalance(toAddress, amount);
 
         return ResponseEntity.ok(transactionEntity);
     }
