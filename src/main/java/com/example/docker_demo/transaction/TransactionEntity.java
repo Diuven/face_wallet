@@ -64,7 +64,7 @@ public class TransactionEntity {
     }
 
     public TransactionEntity(String fromAddress, String toAddress, BigDecimal amount, Long nonce) {
-        this("", "PENDING", 0, fromAddress, toAddress, amount, nonce, "", BigInteger.ZERO, new Date());
+        this(null, "PENDING", 0, fromAddress, toAddress, amount, nonce, "", BigInteger.ZERO, new Date());
     }
 
 

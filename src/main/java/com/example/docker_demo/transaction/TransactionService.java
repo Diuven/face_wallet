@@ -53,20 +53,15 @@ public class TransactionService extends utils {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount exceeds available balance");
         }
         BigInteger nonce = BigInteger.valueOf(fromWalletEntity.getNonce());
-        // TODO set gas priority from request?
-        BigInteger gasPrice = fetchCurrentGasPrice();
 
-        // Create transaction
-        String transactionHexValue = createRawTransactionInHex(
-                nonce, gasPrice, toAddress, amount, credentials
-        );
         // Write db
-        TransactionEntity transactionEntity = createTransactionEntity(
-                fromAddress, toAddress, amount, nonce.longValue()
-        );
+        TransactionEntity transactionEntity = createTransactionEntity(fromAddress, toAddress, amount, nonce.longValue());
         fromWalletEntity = walletService.addPendingTransaction(fromWalletEntity, amount);
 
-        // Send transaction
+        // TODO set gas priority from request?
+        BigInteger gasPrice = fetchCurrentGasPrice();
+        // Create and send transaction
+        String transactionHexValue = createRawTransactionInHex(nonce, gasPrice, toAddress, amount, credentials);
         String transactionHash = sendRawTransaction(transactionHexValue);
 
         // Wait for transaction to be mined
@@ -155,7 +150,10 @@ public class TransactionService extends utils {
         }
 
         if (receipt == null) {
-            throw new ResponseStatusException(HttpStatus.REQUEST_TIMEOUT);
+            throw new ResponseStatusException(
+                    HttpStatus.REQUEST_TIMEOUT,
+                    "Timeout while waiting for receipt from the node. Is transaction invalid?"
+            );
         }
         if (!receipt.getStatus().equals("0x1")){
             throw new ResponseStatusException (HttpStatus.BAD_REQUEST, String.format("Transaction failed in the node %s", transactionHash));
@@ -208,10 +206,16 @@ public class TransactionService extends utils {
     }
 
     public TransactionEntity createTransactionEntity(String fromAddress, String toAddress, BigDecimal amount, Long nonce) {
-        TransactionEntity transactionEntity = new TransactionEntity(
-                fromAddress, toAddress, amount, nonce
-        );
-        return repository.save(transactionEntity);
+        try {
+            TransactionEntity transactionEntity = new TransactionEntity(
+                    fromAddress, toAddress, amount, nonce
+            );
+            return repository.save(transactionEntity);
+        }
+        catch (RuntimeException e) {
+            logger.warn(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Duplicate tx with same key exists.");
+        }
     }
 
     public TransactionEntity updateMinedTransactionEntity(TransactionEntity transactionEntity, TransactionReceipt receipt) {
