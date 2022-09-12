@@ -6,7 +6,11 @@ import java.math.BigInteger;
 import java.util.Date;
 
 @Entity
-@Table(name = "transaction", uniqueConstraints = {@UniqueConstraint(columnNames = {"to_address", "nonce"})})
+@Table(
+        name = "transaction",
+        indexes = {@Index(columnList = "to_address, ts"), @Index(columnList = "from_address, ts")},
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"from_address", "nonce"})}
+)
 public class TransactionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

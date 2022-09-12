@@ -45,7 +45,7 @@ public class TransactionController {
             @NotNull @Param("address") String address,
             @Param("starting_after") String starting_after,
             @Param("ending_before") String ending_before,
-            @Param("size") int size) {
+            @Param("size") Integer size) {
         walletService.fetchWalletEntityFromAddress(address); // to validate address
         List<TransactionEntity> resultList = service.listTransactionView(address, starting_after, ending_before, size);
         return ResponseEntity.ok(resultList);

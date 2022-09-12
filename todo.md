@@ -2,21 +2,10 @@
   * PollingTransactionReceiptProcessor
     * Create transaction, and give hash and checking url
     * Follow the transaction status on that other url
-  * Separate service layers
 * Attach DB
-  * ~~First, make skeleton entities with only h2~~
   * Then add postgres setup
-  * ~~Wallet table~~, ~~Transaction table~~
-    * ~~Block confirmation & transaction counter, transaction state~~
   * Indexing (on txs)
   * External / Internal wallets
-* Error handling
-    * HTTP errors (codes & messages) & responses
-      * Bad requests
-        * web3 exception
-        * db exception
-        * request exception (missing params or etc)
-    * proper logging
 * Testing
     * Unit tests
     * Demo interface (HTML or React SPA)
@@ -39,10 +28,7 @@
   * Structures
   * How to run & develop & investigate
 * DTOs
-  * Gather and make structures of each data classes
-  * DB models / Responses / Request bodies / Exceptions & Errors
   * Configs (Endpoint url, block confirmation threshold, etc)
-  * ResponseEntity
 * Namings
   * Project name (change from docker_demo!)
   * Package name

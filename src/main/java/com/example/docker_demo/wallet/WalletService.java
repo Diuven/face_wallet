@@ -11,7 +11,11 @@ import org.web3j.crypto.Credentials;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.MnemonicUtils;
 import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.DefaultBlockParameterName;
+import org.web3j.protocol.core.methods.response.EthGetBalance;
+import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.http.HttpService;
+import org.web3j.utils.Convert;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
@@ -19,6 +23,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.web3j.crypto.Hash.sha256;
@@ -52,6 +57,31 @@ public class WalletService extends utils {
         ECKeyPair ecKeyPair = ECKeyPair.create(sha256(seed));
         return Credentials.create(ecKeyPair);
     }
+
+    public WalletEntity fetchWalletEntityFromAddressFromNode(String address) {
+        EthGetBalance ethGetBalance = send(web3j.ethGetBalance(address, DefaultBlockParameterName.LATEST), "fetching account balance from");
+        EthGetTransactionCount ethGetTransactionCount = send(web3j.ethGetTransactionCount(address, DefaultBlockParameterName.LATEST), "fetching nonce from");
+        BigDecimal balance = Convert.fromWei(new BigDecimal(ethGetBalance.getBalance()), Convert.Unit.ETHER);
+        Long nonce = ethGetTransactionCount.getTransactionCount().longValue();
+
+        Optional<WalletEntity> optionalWalletEntity = repository.findByAddress(address);
+        if (optionalWalletEntity.isEmpty()) {
+            WalletEntity walletEntity = new WalletEntity(address, nonce, balance, BigDecimal.ZERO);
+            return repository.save(walletEntity);
+        }
+        else {
+            WalletEntity walletEntity = optionalWalletEntity.get();
+            if (walletEntity.getBalanceOnHold().compareTo(BigDecimal.ZERO) != 0) {
+                return walletEntity;
+            }
+            else {
+                walletEntity.setBalance(balance);
+                walletEntity.setNonce(nonce);
+                return repository.save(walletEntity);
+            }
+        }
+    }
+
 
     // DB methods
     public WalletEntity createWalletEntityFromCredentials(Credentials credentials) {
@@ -109,6 +139,6 @@ public class WalletService extends utils {
 
     @Override
     public void logWeb3Action(String msg) {
-        logger.info(msg + "the node");
+        logger.info(msg + " the node");
     }
 }

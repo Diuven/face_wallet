@@ -30,7 +30,14 @@ public class WalletController {
     public ResponseEntity<WalletEntity> getWalletInfo(@Param("address") String address) {
         address = address.toLowerCase();
         WalletEntity walletEntity = service.fetchWalletEntityFromAddress(address);
-        // Return balance, nonce and address to user
+        return ResponseEntity.ok(walletEntity);
+    }
+
+    @GetMapping("/sync")
+    public ResponseEntity<WalletEntity> getWalletSync(@Param("address") String address) {
+        // Sync db with web3 node
+        address = address.toLowerCase();
+        WalletEntity walletEntity = service.fetchWalletEntityFromAddressFromNode(address);
         return ResponseEntity.ok(walletEntity);
     }
 }

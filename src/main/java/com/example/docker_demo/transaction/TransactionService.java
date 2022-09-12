@@ -25,7 +25,6 @@ import javax.validation.Validator;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class TransactionService extends utils {
@@ -82,7 +81,10 @@ public class TransactionService extends utils {
         return transactionEntity;
     }
 
-    public List<TransactionEntity> listTransactionView(String address, String starting_after, String ending_before, int size) {
+    public List<TransactionEntity> listTransactionView(String address, String starting_after, String ending_before, Integer size) {
+        if (size == null){
+            size = 10;
+        }
         List<TransactionEntity> txList = validateTransactionListRequest(address, starting_after, ending_before, size);
 
         Date startDate = null, endDate = null;
@@ -93,7 +95,9 @@ public class TransactionService extends utils {
             endDate = txList.get(1).getTs();
         }
 
-        return repository.findFirstKByAddress(address, startDate, endDate, size);
+        List<TransactionEntity> resultList = repository.findFirstKByAddress(address, startDate, endDate, size);
+        Collections.reverse(resultList); // most recent tx goes to the front
+        return resultList;
     }
 
     // Web3 methods
@@ -131,7 +135,7 @@ public class TransactionService extends utils {
 
     public TransactionReceipt waitForTransactionReceipt(String transactionHash) {
         TransactionReceipt receipt = null;
-        for (int iter = 0; iter < 5; iter++) {
+        for (int iter = 0; iter < 10; iter++) {
             EthGetTransactionReceipt ethGetTransactionReceiptResp = send(
                     web3j.ethGetTransactionReceipt(transactionHash),"fetching transaction receipt from"
             );
@@ -141,9 +145,9 @@ public class TransactionService extends utils {
                 break;
             }
 
-            // Wait 3 seconds
+            // Wait 5 seconds
             try {
-                TimeUnit.SECONDS.sleep(3);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 logger.debug("Interrupted");
                 throw new RuntimeException(e);
@@ -169,7 +173,7 @@ public class TransactionService extends utils {
             if (currentBlockNumber.compareTo(lastBlockNumber) > 0) {
                 // New block mined
                 BigInteger blockConfirmation = currentBlockNumber.subtract(transactionBlockNumber);
-                if (blockConfirmation.intValue() > CONFIRMATION_LIMIT) {
+                if (blockConfirmation.intValue() >= CONFIRMATION_LIMIT) {
                     transactionEntity.setBlockConfirmation(CONFIRMATION_LIMIT);
                     transactionEntity.setStatus("CONFIRMED");
                     return repository.save(transactionEntity);
@@ -183,7 +187,7 @@ public class TransactionService extends utils {
             }
             // Wait 5 seconds
             try {
-                TimeUnit.SECONDS.sleep(5);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 logger.debug("Interrupted");
                 throw new RuntimeException(e);
@@ -215,7 +219,7 @@ public class TransactionService extends utils {
         EthBlock ethBlock = send(
                 web3j.ethGetBlockByNumber(blockParameter, true),"fetching block info from"
         );
-        Date minedDate = new Date(ethBlock.getBlock().getTimestamp().longValue());
+        Date minedDate = new Date(ethBlock.getBlock().getTimestamp().longValue() * 1000);
 
         transactionEntity.setStatus("MINED");
         transactionEntity.setTransactionHash(receipt.getTransactionHash());
@@ -265,6 +269,6 @@ public class TransactionService extends utils {
 
     @Override
     public void logWeb3Action(String msg) {
-        logger.info(msg + "the node");
+        logger.info(msg + " the node");
     }
 }
