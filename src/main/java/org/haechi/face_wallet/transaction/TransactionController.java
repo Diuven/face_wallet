@@ -1,6 +1,6 @@
-package com.example.docker_demo.transaction;
+package org.haechi.face_wallet.transaction;
 
-import com.example.docker_demo.wallet.WalletService;
+import org.haechi.face_wallet.wallet.WalletService;
 import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

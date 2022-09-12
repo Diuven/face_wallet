@@ -1,4 +1,4 @@
-package com.example.docker_demo.wallet;
+package org.haechi.face_wallet.wallet;
 
 import javax.persistence.*;
 import java.math.BigDecimal;

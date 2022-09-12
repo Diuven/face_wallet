@@ -1,6 +1,6 @@
-package com.example.docker_demo.wallet;
+package org.haechi.face_wallet.wallet;
 
-import com.example.docker_demo.utils;
+import org.haechi.face_wallet.utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

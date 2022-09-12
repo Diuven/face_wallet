@@ -1,4 +1,4 @@
-package com.example.docker_demo;
+package org.haechi.face_wallet;
 
 import java.io.IOException;
 
@@ -16,14 +16,12 @@ import org.web3j.protocol.http.HttpService;
 
 @SpringBootApplication
 @RestController
-public class DockerDemoApplication {
+public class FaceWalletApplication {
     @Bean
     public CommonsRequestLoggingFilter requestLoggingFilter() {
         CommonsRequestLoggingFilter loggingFilter = new CommonsRequestLoggingFilter();
         loggingFilter.setIncludeClientInfo(true);
         loggingFilter.setIncludeQueryString(true);
-        loggingFilter.setIncludePayload(true);
-        loggingFilter.setMaxPayloadLength(64000);
         return loggingFilter;
     }
 
@@ -41,7 +39,7 @@ public class DockerDemoApplication {
     }
 
     public static void main(String[] args) {
-        SpringApplication.run(DockerDemoApplication.class, args);
+        SpringApplication.run(FaceWalletApplication.class, args);
     }
 
 }

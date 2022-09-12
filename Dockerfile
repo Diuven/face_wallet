@@ -4,6 +4,5 @@ RUN apt-get update \
 	&& rm -rf /var/cache/apk/*
 
 EXPOSE 8080
-EXPOSE 35729
 
 CMD ./gradlew bootRun -Dspring.devtools.livereload.enabled=true

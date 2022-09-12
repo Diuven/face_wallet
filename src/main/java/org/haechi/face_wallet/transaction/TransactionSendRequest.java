@@ -1,4 +1,4 @@
-package com.example.docker_demo.transaction;
+package org.haechi.face_wallet.transaction;
 
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;

@@ -1,4 +1,4 @@
-package com.example.docker_demo;
+package org.haechi.face_wallet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

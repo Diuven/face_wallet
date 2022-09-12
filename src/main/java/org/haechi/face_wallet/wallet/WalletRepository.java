@@ -1,4 +1,4 @@
-package com.example.docker_demo.wallet;
+package org.haechi.face_wallet.wallet;
 
 import org.springframework.data.repository.CrudRepository;
 

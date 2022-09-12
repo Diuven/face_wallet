@@ -1,7 +1,7 @@
-package com.example.docker_demo;
+package org.haechi.face_wallet;
 
-import com.example.docker_demo.wallet.WalletController;
-import com.example.docker_demo.wallet.WalletRepository;
+import org.haechi.face_wallet.wallet.WalletController;
+import org.haechi.face_wallet.wallet.WalletRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
