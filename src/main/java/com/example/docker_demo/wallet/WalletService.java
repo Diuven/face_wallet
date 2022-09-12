@@ -1,5 +1,7 @@
 package com.example.docker_demo.wallet;
 
+import com.example.docker_demo.utils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -9,15 +11,10 @@ import org.web3j.crypto.Credentials;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.MnemonicUtils;
 import org.web3j.protocol.Web3j;
-import org.web3j.protocol.core.DefaultBlockParameterName;
-import org.web3j.protocol.core.methods.response.EthGetBalance;
-import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.http.HttpService;
-import org.web3j.utils.Convert;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -27,7 +24,7 @@ import java.util.Set;
 import static org.web3j.crypto.Hash.sha256;
 
 @Service
-public class WalletService {
+public class WalletService extends utils {
     private static final Logger logger = LoggerFactory.getLogger(WalletService.class.getName());
     private static final SecureRandom secureRandom = new SecureRandom();
     private final WalletRepository repository;
@@ -54,37 +51,6 @@ public class WalletService {
         byte[] seed = MnemonicUtils.generateSeed(mnemonic, password);
         ECKeyPair ecKeyPair = ECKeyPair.create(sha256(seed));
         return Credentials.create(ecKeyPair);
-    }
-
-    public WalletEntity updateWalletInfo(WalletEntity walletEntity) {
-        String address = walletEntity.getAddress();
-
-        BigInteger nonce;
-        BigDecimal balanceInEth;
-        try {
-            // Fetch nonce and balance from the node
-            // TODO make this atomic?
-            EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(address, DefaultBlockParameterName.LATEST).send();
-            nonce = ethGetTransactionCount.getTransactionCount();
-            EthGetBalance balance = web3j.ethGetBalance(address, DefaultBlockParameterName.LATEST).send();
-            balanceInEth = Convert.fromWei(balance.getBalance().toString(), Convert.Unit.ETHER);
-        }
-        catch (IOException e) {
-            logger.error(e.getMessage());
-            e.printStackTrace();
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error while fetching wallet info from the node. Is the node down?"
-            );
-        }
-        if (walletEntity.getNonce() != nonce.longValue() || balanceInEth.compareTo(walletEntity.getBalance()) != 0) {
-            walletEntity.setNonce(nonce.longValue());
-            walletEntity.setBalance(balanceInEth);
-            return repository.save(walletEntity);
-        }
-        else {
-            return walletEntity;
-        }
     }
 
     // DB methods
@@ -139,5 +105,10 @@ public class WalletService {
                 mnemonic,
                 credentials.getEcKeyPair().getPrivateKey().toString(16)
         );
+    }
+
+    @Override
+    public void logWeb3Action(String msg) {
+        logger.info(msg + "the node");
     }
 }

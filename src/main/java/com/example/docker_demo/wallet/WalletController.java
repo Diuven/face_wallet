@@ -30,8 +30,6 @@ public class WalletController {
     public ResponseEntity<WalletEntity> getWalletInfo(@Param("address") String address) {
         address = address.toLowerCase();
         WalletEntity walletEntity = service.fetchWalletEntityFromAddress(address);
-//        walletEntity = service.updateWalletInfo(walletEntity);
-
         // Return balance, nonce and address to user
         return ResponseEntity.ok(walletEntity);
     }
