@@ -91,6 +91,24 @@ public class TransactionService {
         return ethSendTransaction.getTransactionHash();
     }
 
+    public Transaction fetchTransactionInfo(String transactionHash) {
+        EthTransaction ethTransaction = null;
+        try {
+            ethTransaction = web3j.ethGetTransactionByHash(transactionHash).send();
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            e.printStackTrace();
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error while fetching transaction from the node. Is the node down?"
+            );
+        }
+        return ethTransaction.getTransaction().orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "transaction")
+        );
+    }
+
+
     public TransactionReceipt waitForTransactionReceipt(String transactionHash) {
         TransactionReceipt receipt = null;
         for (int iter = 0; iter < 5; iter++) {

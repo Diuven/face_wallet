@@ -79,27 +79,9 @@ public class TransactionController {
 
 
     @GetMapping("/info")
-    public TransactionInfoResponse info(@Param("address") String address, @Param("privateKeyHex") String privateKeyHex, @Param("transactionHash") String transactionHash) throws Exception {
-        BigInteger privateKey = new BigInteger(privateKeyHex, 16);
-        ECKeyPair ecKeyPair = ECKeyPair.create(privateKey);
-        Credentials credentials = Credentials.create(ecKeyPair);
-
-        Web3j web3j = Web3j.build(new HttpService(
-                "https://tn.henesis.io/ethereum/ropsten?clientId=815fcd01324b8f75818a755a72557750"));
-
-        EthGetTransactionReceipt ethGetTransactionReceiptResp = web3j.ethGetTransactionReceipt(transactionHash).send();
-        TransactionReceipt transactionReceipt = ethGetTransactionReceiptResp.getTransactionReceipt().orElseThrow();
-
-
-        // TODO check credentials
-        EthTransaction ethTransaction = web3j.ethGetTransactionByHash(transactionHash).send();
-        Transaction tx = ethTransaction.getTransaction().orElseThrow();
-
-
-        return new TransactionInfoResponse(
-                tx.getFrom(), tx.getTo(), tx.getValue(), tx.getGasPrice(), tx.getHash(), tx.getNonceRaw(), tx.getBlockHash(), tx.getBlockNumber(),
-                transactionReceipt.getStatus(), "https://ropsten.etherscan.io/tx/" + tx.getHash()
-        );
+    public ResponseEntity<Transaction> transactionInfo(@Param("transactionHash") String transactionHash) {
+        Transaction transaction = service.fetchTransactionInfo(transactionHash);
+        return ResponseEntity.ok(transaction);
     }
 
     @GetMapping("/list")
