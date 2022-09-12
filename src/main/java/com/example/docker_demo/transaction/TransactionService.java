@@ -21,9 +21,7 @@ import javax.validation.Validator;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Date;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -93,7 +91,7 @@ public class TransactionService {
         return ethSendTransaction.getTransactionHash();
     }
 
-    public Transaction fetchTransactionInfo(String transactionHash) {
+    public Transaction fetchTransactionInfoFromNode(String transactionHash) {
         EthTransaction ethTransaction = null;
         try {
             ethTransaction = web3j.ethGetTransactionByHash(transactionHash).send();
@@ -194,6 +192,12 @@ public class TransactionService {
     }
 
     // DB methods
+    public TransactionEntity fetchTransactionInfo(String transactionHash) {
+        return transactionRepository.findByTransactionHash(transactionHash).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "transaction")
+        );
+    }
+
     public TransactionEntity createTransactionEntity(String fromAddress, String toAddress, BigDecimal amount, Long nonce) {
         TransactionEntity transactionEntity = new TransactionEntity(
                 fromAddress, toAddress, amount, nonce
@@ -223,10 +227,8 @@ public class TransactionService {
         return transactionRepository.save(transactionEntity);
     }
 
-    public TransactionEntity updateConfirmedTransactionEntity(TransactionEntity transactionEntity) {
-        transactionEntity.setStatus("CONFIRMED");
-        transactionEntity.setBlockConfirmation(CONFIRMATION_LIMIT);
-        return transactionRepository.save(transactionEntity);
+    public List<TransactionEntity> fetchTransactionList(String address, Date startDate, Date endDate, int size) {
+        return transactionRepository.findFirstKByAddress(address, startDate, endDate, size);
     }
 
     // DTO methods
@@ -277,4 +279,26 @@ public class TransactionService {
         return true;
     }
 
+    public List<TransactionEntity> validateTransactionListRequest(String address, String starting_after, String ending_before, int size) {
+        if (size <= 0 || size > 100) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "size should be in 1 to 100");
+        }
+        TransactionEntity startTx = null, endTx = null;
+        if (starting_after != null) {
+            startTx = fetchTransactionInfo(starting_after);
+            if (!startTx.getFromAddress().equals(address) && !startTx.getToAddress().equals(address)){
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "starting_after is not related to given address");
+            }
+        }
+        if (ending_before != null) {
+            endTx = fetchTransactionInfo(ending_before);
+            if (!endTx.getFromAddress().equals(address) && !endTx.getToAddress().equals(address)){
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "ending_before is not related to given address");
+            }
+        }
+        List<TransactionEntity> resultList = new ArrayList<>();
+        resultList.add(startTx);
+        resultList.add(endTx);
+        return resultList;
+    }
 }

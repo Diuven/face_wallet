@@ -8,13 +8,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.web3j.crypto.Credentials;
-import org.web3j.crypto.ECKeyPair;
-import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.methods.response.*;
-import org.web3j.protocol.http.HttpService;
 
+import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Date;
+import java.util.List;
 
 @RestController
 @RequestMapping("transaction")
@@ -74,21 +74,28 @@ public class TransactionController {
 
 
     @GetMapping("/info")
-    public ResponseEntity<Transaction> transactionInfo(@Param("transactionHash") String transactionHash) {
-        Transaction transaction = service.fetchTransactionInfo(transactionHash);
-        return ResponseEntity.ok(transaction);
+    public ResponseEntity<TransactionEntity> transactionInfo(@Param("transactionHash") String transactionHash) {
+        TransactionEntity transactionEntity = service.fetchTransactionInfo(transactionHash);
+        return ResponseEntity.ok(transactionEntity);
     }
 
     @GetMapping("/list")
-    public String list(@Param("address") String address, @Param("privateKeyHex") String privateKeyHex) throws Exception {
-        BigInteger privateKey = new BigInteger(privateKeyHex, 16);
-        ECKeyPair ecKeyPair = ECKeyPair.create(privateKey);
-        Credentials credentials = Credentials.create(ecKeyPair);
+    public ResponseEntity<List<TransactionEntity>> transactionList(
+            @NotNull @Param("address") String address,
+            @Param("starting_after") String starting_after,
+            @Param("ending_before") String ending_before,
+            @Param("size") int size) {
+        walletService.fetchWalletEntityFromAddress(address); // to validate address
+        List<TransactionEntity> txList = service.validateTransactionListRequest(address, starting_after, ending_before, size);
 
-        // TODO check credentials
-        Web3j web3j = Web3j.build(new HttpService(
-                "https://tn.henesis.io/ethereum/ropsten?clientId=815fcd01324b8f75818a755a72557750"));
+        Date startDate = null, endDate = null;
+        if (txList.get(0) != null) {
+            startDate = txList.get(0).getTs();
+        }
+        if (txList.get(1) != null) {
+            endDate = txList.get(1).getTs();
+        }
 
-        return "Not yet implemeneted";
+        return ResponseEntity.ok(service.fetchTransactionList(address, startDate, endDate, size));
     }
 }
